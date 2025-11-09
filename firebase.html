@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Firebase Auto-Sender</title>
+  <style>
+    body {
+      background: #0e0e10;
+      color: #f2f2f2;
+      font-family: monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    h2 {
+      color: #22d3ee;
+    }
+    #status {
+      margin-top: 20px;
+      font-size: 14px;
+      color: #9cdcfe;
+      background: #1a1a1c;
+      padding: 15px;
+      border-radius: 8px;
+      border: 1px solid #333;
+      width: 100%;
+      max-width: 600px;
+      white-space: pre-wrap;
+      line-height: 1.6;
+      height: 400px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>🩺 Automatic Guardian Data Sender</h2>
+  <p>This page is automatically sending new random data every 2 seconds.</p>
+  <div id="status">Initializing...</div>
+
+  <!-- Firebase SDKs -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+    // === Your Firebase Config ===
+    const firebaseConfig = {
+      apiKey: "AIzaSyAuNrkjHb5_GbGdEQqarokhSxxZz-IL51c",
+      authDomain: "edgedevice.firebaseapp.com",
+      databaseURL: "https://edgedevice-default-rtdb.firebaseio.com/",
+      projectId: "edgedevice",
+      storageBucket: "edgedevice.firebasestorage.app",
+      messagingSenderId: "379840080249",
+      appId: "1:379840080249:web:c6cf422c177c3a31f827a8",
+      measurementId: "G-3C7Q9J8L3D"
+    };
+
+    // === Initialize Firebase ===
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const status = document.getElementById("status");
+
+    // Helper functions for random data
+    const random = (min, max) => Math.random() * (max - min) + min;
+    const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+    function sendData() {
+      // 1. Generate new random data
+      const newData = {
+        avgHeartRate: random(75, 110),
+        avgHRV: random(30, 55),
+        avgCO2: random(900, 1400),
+        avgBrakePressure: random(5, 30),
+        avgAccelZ: random(1.2, 2.5),
+        fatigue: pick(["Normal", "Moderate", "High"]),
+        stress: pick(["Normal", "Elevated", "High"]),
+        road: pick(["Smooth", "Irregularity Detected", "Poor Condition"]),
+        braking: pick(["Normal", "Aggressive", "Late Braking"]),
+        overall: pick([
+          "Driving anomalies detected — drive carefully.",
+          "All systems nominal. Driver is calm.",
+          "High stress & fatigue detected. Recommend rest.",
+          "Aggressive braking pattern observed."
+        ])
+      };
+      
+      // 2. Define the exact path
+      const dataRef = ref(db, 'guardianReport/latest');
+
+      // 3. Send the data to Firebase
+      set(dataRef, newData)
+      .then(() => {
+        const now = new Date().toLocaleTimeString();
+        status.innerHTML = `[${now}] ✅ Sent new data:\n\n${JSON.stringify(newData, null, 2)}\n\n` + status.innerHTML;
+      })
+      .catch((error) => {
+        console.error(error);
+        status.innerHTML = "❌ Error sending data: " + error.message + "\n\n" + status.innerHTML;
+      });
+    }
+
+    // === START AUTOMATIC SENDING ===
+    // Send data immediately on load
+    sendData();
+    
+    // Then, send new data every 2 seconds (2000 milliseconds)
+    setInterval(sendData, 2000);
+
+  </script>
+</body>
+</html>

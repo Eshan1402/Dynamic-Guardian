@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vehicle Telemetry Dashboard</title>
+    <meta name="description" content="Classy front-end dashboard for vehicle power, torque, diagnostics, and CAN bus readings." />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./styles.css" />
+
+    <script type="module" src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
+    <script type="module" src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js"></script>
+  </head>
+  <body>
+    <div class="bg-graphic" aria-hidden="true"></div>
+    <div class="cursor-blob" aria-hidden="true"></div>
+    <header class="app-header">
+      <div class="brand">
+        <div class="logo" aria-hidden="true">VW</div>
+        <div class="titles">
+          <h1>Vehicle Telemetry</h1>
+          <p>Real-time power, torque, diagnostics and CAN bus</p>
+        </div>
+      </div>
+      <div class="controls">
+        <button id="btn-connect" class="btn primary" aria-label="Connect to CAN bus">Connect CAN</button>
+        <button id="btn-info" class="btn" aria-label="Get information">Get Information</button>
+      </div>
+    </header>
+
+    <main class="grid">
+      <section class="card ai-analysis" aria-labelledby="ai-title">
+        <div class="section-header">
+          <h2 id="ai-title">Predictive Safety</h2>
+          <span class="sub">ML-driven situational awareness</span>
+        </div>
+        <div class="ai-body">
+          <div class="ai-status">
+            <span id="ai-risk-label" class="risk-chip safe">Stable</span>
+            <p id="ai-risk-desc">Model indicates nominal driving pattern.</p>
+          </div>
+          <div class="ai-metrics">
+            <div class="ai-metric">
+              <span class="k">Battery Health</span>
+              <span class="v" id="ai-battery-health">Good</span>
+            </div>
+            <div class="ai-metric">
+              <span class="k">Driver Load</span>
+              <span class="v" id="ai-driver-strain">Low</span>
+            </div>
+            <div class="ai-metric">
+              <span class="k">Thermal Headroom</span>
+              <span class="v" id="ai-thermal">Nominal</span>
+            </div>
+            <div class="ai-metric">
+              <span class="k">Telemetry Insight</span>
+              <span class="v" id="ai-telemetry">All systems green</span>
+            </div>
+          </div>
+          <div class="ai-actions">
+            <button class="btn emergency" id="btn-alert-emergency">Alert Emergency Services</button>
+            <button class="btn secondary" id="btn-alert-family">Notify Family</button>
+            <button class="btn tertiary" id="btn-explore-safety">Explore More</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="card bms" aria-labelledby="bms-title">
+        <div class="section-header">
+          <h2 id="bms-title">Battery Management</h2>
+          <span class="sub">Pack health & trends</span>
+        </div>
+        <div class="bms-grid">
+          <div class="bms-metrics">
+            <div class="metric">
+              <span class="k">Pack Voltage</span>
+              <span class="v"><span id="bms-voltage">0</span> V</span>
+            </div>
+            <div class="metric">
+              <span class="k">Pack Current</span>
+              <span class="v"><span id="bms-current">0</span> A</span>
+            </div>
+            <div class="metric">
+              <span class="k">Cell Delta</span>
+              <span class="v"><span id="bms-delta">0</span> mV</span>
+            </div>
+            <div class="metric">
+              <span class="k">Battery Temp</span>
+              <span class="v"><span id="bms-temp">0</span> °C</span>
+            </div>
+          </div>
+          <div class="bms-chart-wrap">
+            <canvas id="bms-chart" width="800" height="300" aria-label="BMS telemetry chart"></canvas>
+          </div>
+        </div>
+      </section>
+      <section class="card gauges" aria-labelledby="gauges-title">
+        <div class="section-header">
+          <h2 id="gauges-title">Powertrain</h2>
+          <span class="sub">Live readings</span>
+        </div>
+        <div class="gauges-grid">
+          <div class="gauge" data-type="power">
+            <div class="gauge-svg" id="gauge-power" aria-label="Power gauge"></div>
+            <div class="gauge-meta">
+              <span class="label">Power</span>
+              <span class="value"><span id="val-power">0</span> kW</span>
+            </div>
+          </div>
+          <div class="gauge" data-type="torque">
+            <div class="gauge-svg" id="gauge-torque" aria-label="Torque gauge"></div>
+            <div class="gauge-meta">
+              <span class="label">Torque</span>
+              <span class="value"><span id="val-torque">0</span> Nm</span>
+            </div>
+          </div>
+          <div class="gauge" data-type="rpm">
+            <div class="gauge-svg" id="gauge-rpm" aria-label="RPM gauge"></div>
+            <div class="gauge-meta">
+              <span class="label">RPM</span>
+              <span class="value"><span id="val-rpm">0</span> rpm</span>
+            </div>
+          </div>
+          <div class="gauge" data-type="speed">
+            <div class="gauge-svg" id="gauge-speed" aria-label="Speed gauge"></div>
+            <div class="gauge-meta">
+              <span class="label">Speed</span>
+              <span class="value"><span id="val-speed">0</span> km/h</span>
+            </div>
+          </div>
+          <div class="gauge small" data-type="soc">
+            <div class="gauge-svg" id="gauge-soc" aria-label="Battery state of charge"></div>
+            <div class="gauge-meta">
+              <span class="label">Battery</span>
+              <span class="value"><span id="val-soc">0</span>%</span>
+            </div>
+          </div>
+          <div class="gauge small" data-type="coolant">
+            <div class="gauge-svg" id="gauge-coolant" aria-label="Coolant temperature"></div>
+            <div class="gauge-meta">
+              <span class="label">Coolant</span>
+              <span class="value"><span id="val-coolant">0</span> °C</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card diagnostics" aria-labelledby="diag-title">
+        <div class="section-header">
+          <h2 id="diag-title">Diagnostics</h2>
+          <span class="sub">OBD-II / Health</span>
+        </div>
+        <ul id="dtc-list" class="dtc-list" aria-live="polite">
+          </ul>
+        <div class="diag-actions">
+          <button id="btn-clear-dtc" class="btn subtle">Clear Codes</button>
+        </div>
+      </section>
+
+      <section class="card canbus" aria-labelledby="can-title">
+        <div class="section-header">
+          <h2 id="can-title">CAN Bus</h2>
+          <span class="sub">Live frames</span>
+        </div>
+        <div class="can-toolbar">
+          <label class="switch">
+            <input type="checkbox" id="toggle-can-stream" />
+            <span>Stream</span>
+          </label>
+          <div class="filters">
+            <input id="can-filter" class="input" placeholder="Filter by ID (e.g. 0x123)" />
+          </div>
+        </div>
+        <div class="table-wrap" role="region" aria-label="CAN frames" tabindex="0">
+          <table class="table" id="can-table">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>ID</th>
+                <th>DLC</th>
+                <th>Data</th>
+              </tr>
+            </thead>
+            <tbody>
+              </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <footer class="app-footer">
+      <span>Demo UI by team Decryptors</span>
+      <span>Team Members: Eshan Saxena, Chaitanya Srivastava</span>
+    </footer>
+
+    <div class="modal-overlay" id="safety-modal" role="dialog" aria-modal="true" aria-labelledby="safety-modal-title" aria-describedby="safety-modal-desc" hidden>
+      <div class="modal-dialog">
+        <button class="modal-close" id="safety-modal-close" aria-label="Close safety insights">×</button>
+        <div class="modal-header">
+          <img src="https://via.placeholder.com/96x96.png?text=Driver" alt="Driver portrait" class="driver-photo" id="driver-photo" />
+          <div>
+            <h2 id="safety-modal-title">Driver & Vehicle Health</h2>
+            <p id="safety-modal-desc" class="modal-sub">Deep-dive telemetry, battery health, and proactive safeguards.</p>
+          </div>
+        </div>
+        <div class="modal-content">
+          <section>
+            <h3>Driver Snapshot</h3>
+            <ul class="stat-list">
+              <li><span>Driver Load</span><strong id="modal-driver-load">Low</strong></li>
+              <li><span>Recent Maneuvers</span><strong id="modal-maneuvers">Calm</strong></li>
+              <li><span>Fatigue Estimate</span><strong id="modal-fatigue">Fresh</strong></li>
+            </ul>
+          </section>
+          <section>
+            <h3>Battery & Powertrain</h3>
+            <ul class="stat-list">
+              <li><span>Pack Voltage</span><strong id="modal-pack-voltage">360 V</strong></li>
+              <li><span>Current Draw</span><strong id="modal-pack-current">120 A</strong></li>
+              <li><span>Cell Delta</span><strong id="modal-cell-delta">8 mV</strong></li>
+              <li><span>Thermal Band</span><strong id="modal-thermal-band">Nominal</strong></li>
+            </ul>
+          </section>
+          <section>
+            <h3>Safety Measures</h3>
+            <div class="measure-list">
+              <article>
+                <h4>Realtime Safeguards</h4>
+                <p id="modal-safeguards">Automatic cruise modulation ready if surge detected.</p>
+              </article>
+              <article>
+                <h4>Recommended Actions</h4>
+                <p id="modal-recommendations">Maintain steady speed; monitor coolant temps on long climbs.</p>
+              </article>
+              <article>
+                <h4>Emergency Prep</h4>
+                <p id="modal-emergency">Emergency contacts synced; seatbelt tensioners pre-armed.</p>
+              </article>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <script src="./app.js" type="module"></script>
+    <script src="./explore.js" type="module"></script>
+  </body>
+  </html>
