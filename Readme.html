@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Guardian - Interactive Showcase</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js"></script>
+    <!-- Chosen Palette: Calm Harmony (Warm Neutrals with Soft Blue/Teal Accents) -->
+    <!-- Application Structure Plan: A sidebar navigation-based SPA. The README's sections are mapped to navigation items (Overview, Architecture, ML Model, Dashboard, Setup, etc.). Clicking a nav link reveals the corresponding content section in the main area. This structure is intuitive for technical documentation, allowing users to non-linearly explore the project's facets. Key interactions include an interactive HTML-based architecture diagram, Chart.js dashboard mockups, and copy-to-clipboard for code snippets. This design prioritizes clarity and user-driven exploration over a linear document. -->
+    <!-- Visualization & Content Choices:
+        - System Overview: Goal: Inform. Method: Text + 4-card grid (HTML/Tailwind) for key features. Interaction: Hover effects. Justification: Visually breaks down the 4 core functions.
+        - Architecture: Goal: Organize. Method: Recreated ASCII diagram using HTML/Tailwind divs/borders/flexbox. Interaction: Clicking a box (e.g., 'Arduino') reveals a modal with details from 'Code Features'. Justification: Makes the static flow diagram interactive and informative (HTML/JS).
+        - ML Model: Goal: Inform/Compare. Method: HTML tables for 'Inference Categories' & 'Safety Logic'. Justification: Tables are the clearest way to present this structured data.
+        - Dashboard & Data: Goal: Inform/Organize. Method: 2-col layout. Left: Chart.js Bar/Line charts (Canvas) to *mock-up* the LVGL dashboard. Right: Styled `<pre><code>` for Firebase JSON. Interaction: Chart tooltips. Justification: Visualizing the dashboard is more impactful than text. (Chart.js/Canvas).
+        - Setup: Goal: Inform. Method: Numbered steps with styled `<pre><code>` for code. Interaction: Copy buttons (JS). Justification: Makes setup instructions actionable.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #94a3b8;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+        
+        .nav-link {
+            transition: all 0.2s ease-in-out;
+        }
+        .nav-link.active {
+            background-color: #0f766e;
+            color: white;
+            font-weight: 600;
+        }
+        .nav-link:not(.active):hover {
+            background-color: #f0fdfa; 
+            color: #0d9488;
+        }
+        .content-section {
+            display: none;
+        }
+        .content-section.active {
+            display: block;
+        }
+        
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 250px;
+            max-height: 300px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 300px;
+            }
+        }
+
+        .arch-box {
+            border: 2px solid #0d9488;
+            background-color: #f0fdfa;
+            color: #134e4a;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            text-align: center;
+            font-weight: 600;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .arch-box:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+        }
+        .arch-arrow {
+            font-size: 2.5rem;
+            color: #0d9488;
+            line-height: 1;
+        }
+
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .modal-backdrop.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            transform: translateY(-20px);
+            transition: all 0.3s ease;
+        }
+        .modal-backdrop.active .modal-content {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 flex flex-col md:flex-row min-h-screen">
+
+    <!-- Sidebar Navigation -->
+    <nav class="w-full md:w-64 bg-white md:border-r border-slate-200 flex-shrink-0 shadow-md md:shadow-none">
+        <div class="p-4 border-b border-slate-200">
+            <h1 class="text-xl font-bold text-teal-700">🚗 Dynamic Guardian</h1>
+            <p class="text-sm text-slate-600">AI Health Monitor</p>
+        </div>
+        <ul class="p-2 space-y-1">
+            <li><a href="#overview" class="nav-link active flex items-center gap-3 px-4 py-2 rounded-md text-slate-700">
+                <span class="text-xl">🧠</span> <span>Overview</span>
+            </a></li>
+            <li><a href="#architecture" class="nav-link flex items-center gap-3 px-4 py-2 rounded-md text-slate-700">
+                <span class="text-xl">⚙️</span> <span>Architecture</span>
+            </a></li>
+            <li><a href="#hw-sw" class="nav-link flex items-center gap-3 px-4 py-2 rounded-md text-slate-700">
+                <span class="text-xl">💻</span> <span>Hardware/Software</span>
+            </a></li>
+            <li><a href="#model" class="nav-link flex items-center gap-3 px-4 py-2 rounded-md text-slate-700">
+                <span class="text-xl">🤖</span> <span>ML Model & Logic</span>
+            </a></li>
+            <li><a href="#dashboard" class="nav-link flex items-center gap-3 px-4 py-2 rounded-md text-slate-700">
+                <span class="text-xl">📊</span> <span>Dashboard & Data</span>
+            </a></li>
+            <li><a href="#setup" class="nav-link flex items-center gap-3 px-4 py-2 rounded-md text-slate-700">
+                <span class="text-xl">🔧</span> <span>Setup & Config</span>
+            </a></li>
+            <li><a href="#extras" class="nav-link flex items-center gap-3 px-4 py-2 rounded-md text-slate-700">
+                <span class="text-xl">💡</span> <span>Extras</span>
+            </a></li>
+        </ul>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 overflow-y-auto p-4 md:p-8 lg:p-12">
+        <div class="max-w-4xl mx-auto">
+
+            <!-- Overview Section -->
+            <section id="overview" class="content-section active space-y-6">
+                <h2 class="text-3xl font-bold text-teal-800 border-b pb-2">System Overview</h2>
+                <p class="text-lg text-slate-700">
+                    This section introduces the Dynamic Guardian, an AI-powered safety system for vehicles. It operates on a two-board architecture to gather sensor data, process it using machine learning, and provide real-time alerts on a dashboard and to the cloud.
+                </p>
+                <p class="text-slate-600">
+                    The system combines an **Arduino** for reliable sensor collection and a powerful **ESP32-S3** for ML inference, visualization, and cloud communication. It is designed to detect four key indicators of driver and vehicle state:
+                </p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+                        <h3 class="text-xl font-semibold text-teal-700 mb-2">Driver Fatigue</h3>
+                        <p class="text-slate-600">Monitors sensor data for signs of drowsiness or low alertness in the driver.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+                        <h3 class="text-xl font-semibold text-teal-700 mb-2">Driver Stress</h3>
+                        <p class="text-slate-600">Detects high heart rate or other erratic biometric behaviors indicating stress.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+                        <h3 class="text-xl font-semibold text-teal-700 mb-2">Pothole / Road Condition</h3>
+                        <p class="text-slate-600">Identifies rough terrain or road vibrations from accelerometer data.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+                        <h3 class="text-xl font-semibold text-teal-700 mb-2">Harsh or Late Braking</h3>
+                        <p class="text-slate-600">Flags rapid deceleration or
+                        sudden stops as potential risk events.</p>
+                    </div>
+                </div>
+                <h3 class="text-2xl font-bold text-teal-800 border-b pb-2 mt-8">How It Works</h3>
+                <ol class="list-decimal list-inside space-y-2 text-slate-700 text-base md:text-lg pl-4">
+                    <li><strong>Data Acquisition (Arduino):</strong> All sensors (heart rate, accelerometer, etc.) are read by the dedicated Arduino board.</li>
+                    <li><strong>Transmission (UART):</strong> The Arduino formats and sends this data as a clean string to the ESP32.</li>
+                    <li><strong>Reception & Preprocessing (ESP32):</strong> The ESP32 receives the string, parses it, and averages the data over a 5-second window.</li>
+                    <li><strong>Inference (ESP32):</strong> An Edge Impulse model predicts driver and vehicle states from this averaged data.</li>
+                    <li><strong>Visualization (ESP32):</strong> The onboard LVGL dashboard shows real-time fatigue/stress levels and road events.</li>
+                    <li><strong>Cloud Update (ESP32):</strong> The latest data and alerts are sent to Firebase Realtime Database for remote analysis.</li>
+                </ol>
+            </section>
+
+            <!-- Architecture Section -->
+            <section id="architecture" class="content-section space-y-6">
+                <h2 class="text-3xl font-bold text-teal-800 border-b pb-2">System Architecture & Data Flow</h2>
+                <p class="text-lg text-slate-700">
+                    The system is built on a two-component architecture to ensure stable sensor readings and powerful data processing. The Arduino acts as a simple, robust sensor hub, while the ESP32 handles all complex tasks. Click on a component box to see its key features.
+                </p>
+                <div class="flex flex-col items-center space-y-2 p-4 bg-white rounded-lg shadow-sm border border-slate-200 overflow-x-auto">
+                    <div class="arch-box modal-trigger" data-modal="sensors-modal">
+                        Sensors<br>(HR, Accel, CO2, etc.)
+                    </div>
+                    <div class="arch-arrow">↓</div>
+                    <div class="arch-box modal-trigger" data-modal="arduino-modal">
+                        Arduino (Transmitter)<br>
+                        <span class="text-sm font-normal">- Gathers data<br>- Formats to string</span>
+                    </div>
+                    <div class="text-sm text-slate-500 font-medium py-2">(Serial/UART Communication)</div>
+                    <div class="arch-arrow">↓</div>
+                    <div class="arch-box modal-trigger" data-modal="esp32-modal">
+                        ESP32-S3 (Receiver)<br>
+                        <span class="text-sm font-normal">- Parses string<br>- Manages data window</span>
+                    </div>
+                    <div class="arch-arrow">↓</div>
+                    <div class="text-sm text-slate-500 font-medium py-2">[Feature Scaling & Normalization]</div>
+                    <div class="arch-arrow">↓</div>
+                    <div class="arch-box modal-trigger" data-modal="ml-modal">
+                        Edge Impulse Classifier<br>
+                        <span class="text-sm font-normal">(Fatigue/Stress/Road)</span>
+                    </div>
+                    <div class="w-full flex justify-center py-4">
+                        <div class="border-l border-r border-b border-teal-600 h-8 w-3/4"></div>
+                    </div>
+                    <div class="w-full flex justify-around">
+                        <div class="flex flex-col items-center">
+                            <div class="arch-arrow">↓</div>
+                            <div class="arch-box modal-trigger" data-modal="ui-modal">
+                                LVGL Dashboard<br>
+                                <span class="text-sm font-normal">(Visual Feedback)</span>
+                            </div>
+                        </div>
+                        <div class="flex flex-col items-center">
+                            <div class="arch-arrow">↓</div>
+                            <div class="arch-box modal-trigger" data-modal="db-modal">
+                                Firebase Realtime DB<br>
+                                <span class="text-sm font-normal">(Remote Monitoring)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Hardware/Software Section -->
+            <section id="hw-sw" class="content-section space-y-6">
+                <h2 class="text-3xl font-bold text-teal-800 border-b pb-2">Hardware & Software</h2>
+                <p class="text-lg text-slate-700">
+                    This project requires specific hardware components for the main controller and sensor hub, as well as several software libraries for both the Arduino and ESP32.
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+                        <h3 class="text-2xl font-semibold text-teal-700 mb-4">🧩 Hardware</h3>
+                        <ul class="space-y-3 text-slate-600">
+                            <li><strong>Main Controller:</strong> LilyGo T-Display-S3</li>
+                            <li><strong>Sensor Hub:</strong> Arduino (Uno, Nano, etc.)</li>
+                            <li><strong>Sensors:</strong> Heart rate, CO₂, MPU6050, Brake pressure</li>
+                            <li><strong>Connection:</strong> Logic level shifter (for 5V Arduino)</li>
+                        </ul>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+                        <h3 class="text-2xl font-semibold text-teal-700 mb-4">💻 Software</h3>
+                        <p class="text-slate-600 mb-2 font-medium">ESP32 Libraries:</p>
+                        <ul class="list-disc list-inside space-y-1 text-slate-600 mb-4">
+                            <li>`LilyGo_AMOLED`</li>
+                            <li>`LV_Helper`</li>
+                            <li>`Firebase_ESP_Client`</li>
+                            <li>`include Edge_device_inferencing.h`</li>
+                            <li>`WiFi.h`</li>
+                        </ul>
+                        <p class="text-slate-600 mb-2 font-medium">Arduino Libraries:</p>
+                        <ul class="list-disc list-inside space-y-1 text-slate-600">
+                            <li>`SoftwareSerial.h` (if needed)</li>
+                            <li>Sensor-specific libraries (e.g., `Adafruit_MPU6050`)</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- ML Model Section -->
+            <section id="model" class="content-section space-y-6">
+                <h2 class="text-3xl font-bold text-teal-800 border-b pb-2">ML Model & Safety Logic</h2>
+                <p class="text-lg text-slate-700">
+                    The core of the system is an Edge Impulse classifier. This model takes in the processed sensor data and outputs a classification. This classification is then refined by a layer of safety logic to produce the final user-facing alert.
+                </p>
+
+                <h3 class="text-2xl font-semibold text-teal-700 mb-4">Inference Categories</h3>
+                <div class="overflow-x-auto bg-white rounded-lg shadow-sm border border-slate-200">
+                    <table class="w-full min-w-max text-left text-slate-700">
+                        <thead class="bg-slate-100 text-slate-600 uppercase text-sm">
+                            <tr>
+                                <th class="p-4">Label Index</th>
+                                <th class="p-4">Category</th>
+                                <th class="p-4">Typical Meaning</th>
+                                <th class="p-4">Display Behavior</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-200">
+                            <tr>
+                                <td class="p-4 font-medium">0</td>
+                                <td class="p-4">Fatigue</td>
+                                <td class="p-4">Drowsiness or low alertness</td>
+                                <td class="p-4">“Fatigue: Drowsy”</td>
+                            </tr>
+                            <tr>
+                                <td class="p-4 font-medium">1</td>
+                                <td class="p-4">Stress</td>
+                                <td class="p-4">High heart rate or erratic behavior</td>
+                                <td class="p-4">“Stress: High”</td>
+                            </tr>
+                            <tr>
+                                <td class="p-4 font-medium">2</td>
+                                <td class="p-4">Pothole / Road</td>
+                                <td class="p-4">Rough terrain or vibration detected</td>
+                                <td class="p-4">“Road: Poor Condition”</td>
+                            </tr>
+                            <tr>
+                                <td class="p-4 font-medium">3</td>
+                                <td class="p-4">Harsh Braking</td>
+                                <td class="p-4">Rapid deceleration or sudden stop</td>
+                                <td class="p-4">“Braking: Late Braking”</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3 class="text-2xl font-semibold text-teal-700 mb-4 mt-8">Safety Logic (Explanation Layer)</h3>
+                <div class="overflow-x-auto bg-white rounded-lg shadow-sm border border-slate-200">
+                    <table class="w-full min-w-max text-left text-slate-700">
+                        <thead class="bg-slate-100 text-slate-600 uppercase text-sm">
+                            <tr>
+                                <th class="p-4">Condition</th>
+                                <th class="p-4">Trigger</th>
+                                <th class="p-4">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-200">
+                            <tr>
+                                <td class="p-4 font-medium">Fatigue > 0.8</td>
+                                <td class="p-4">High drowsiness</td>
+                                <td class="p-4">Show “⚠️ Fatigue Alert”</td>
+                            </tr>
+                            <tr>
+                                <td class="p-4 font-medium">Stress > 0.7</td>
+                                <td class="p-4">High stress response</td>
+                                <td class="p-4">Show “⚠️ Stress Alert”</td>
+                            </tr>
+                            <tr>
+                                <td class="p-4 font-medium">Pothole > 0.6</td>
+                                <td class="p-4">Uneven road</td>
+                                <td class="p-4">Warn driver</td>
+                            </tr>
+                            <tr>
+                                <td class="p-4 font-medium">Braking > 0.6</td>
+                                <td class="p-4">Sudden deceleration</td>
+                                <td class="p-4">Mark as harsh braking</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            
+            <!-- Dashboard & Data Section -->
+            <section id="dashboard" class="content-section space-y-6">
+                <h2 class="text-3xl font-bold text-teal-800 border-b pb-2">Dashboard & Data Format</h2>
+                <p class="text-lg text-slate-700">
+                    The ESP32 processes all data and generates two primary outputs: a visual feed for the local LVGL dashboard and a JSON data packet for the remote Firebase database.
+                </p>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="space-y-6">
+                        <h3 class="text-2xl font-semibold text-teal-700">LVGL Dashboard Mockup</h3>
+                        <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200 space-y-4">
+                            <div>
+                                <h4 class="text-lg font-medium text-slate-700 text-center mb-2">Driver Status</h4>
+                                <div class="chart-container h-48 md:h-56">
+                                    <canvas id="driverStatusChart"></canvas>
+                                </div>
+                            </div>
+                            <div>
+                                <h4 class="text-lg font-medium text-slate-700 text-center mb-2">Vehicle & Road Events (Last 30s)</h4>
+                                <div class="chart-container h-48 md:h-56">
+                                    <canvas id="vehicleEventsChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="text-center p-4 bg-slate-100 rounded-md">
+                                <p class="text-lg font-semibold text-teal-800">Status: <span class="font-normal text-slate-700">All systems normal.</span></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="space-y-6">
+                        <h3 class="text-2xl font-semibold text-teal-700">Firebase Realtime Data</h3>
+                        <div class="bg-gray-900 text-gray-300 rounded-lg shadow-lg border border-gray-700">
+                            <div class="p-4 border-b border-gray-700">
+                                <p class="text-sm font-medium">Path: <span class="text-teal-400">/guardianReport/latest</span></p>
+                            </div>
+                            <pre class="p-4 text-sm overflow-x-auto"><code class="language-json">{
+  "avgAccelZ": 3.5,
+  "avgBrakePressure": 25.1,
+  "avgCO2": 820.3,
+  "avgHRV": 28.9,
+  "avgHeartRate": 88.2,
+  "braking": "Normal",
+  "fatigue": "Normal",
+  "overall": "All systems normal.",
+  "road": "Smooth",
+  "stress": "Normal",
+  "samplingRateMs": 500,
+  "sendingLatencyMs": 128
+}</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Setup Section -->
+            <section id="setup" class="content-section space-y-6">
+                <h2 class="text-3xl font-bold text-teal-800 border-b pb-2">Configuration & Setup</h2>
+                <p class="text-lg text-slate-700">
+                    Setting up the Dynamic Guardian involves flashing code to both the Arduino and the ESP32. Follow these steps to configure your device.
+                </p>
+
+                <div class="space-y-4">
+                    <h3 class="text-2xl font-semibold text-teal-700">1. Arduino Transmitter</h3>
+                    <ol class="list-decimal list-inside space-y-3 text-slate-700 pl-4">
+                        <li>Connect all your sensors (MPU6050, Heart Rate, CO2, etc.) to the Arduino.</li>
+                        <li>In your `Arduino_Transmitter.ino` code, implement the logic to read from each sensor.</li>
+                        <li>Combine all readings into a single comma-separated string and send it over the `Serial` port.</li>
+                    </ol>
+                    <div class="bg-gray-900 rounded-lg shadow-lg relative group">
+                        <button class="copy-btn absolute top-2 right-2 bg-slate-700 text-slate-300 px-2 py-1 rounded-md text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity">Copy</button>
+                        <pre class="p-4 text-gray-300 text-sm overflow-x-auto"><code class="language-cpp">// Example Arduino code snippet
+Serial.println(String(hr) + "," + String(hrv) + "," + String(co2) + "," + String(accelZ));</code></pre>
+                    </div>
+                </div>
+                
+                <div class="space-y-4">
+                    <h3 class="text-2xl font-semibold text-teal-700">2. ESP32-S3 Receiver</h3>
+                     <ol class="list-decimal list-inside space-y-3 text-slate-700 pl-4">
+                        <li>Connect the Arduino's TX pin to the ESP32's RX pin (use a logic level shifter if needed). Connect their GND pins.</li>
+                        <li>In the ESP32 code, update your network credentials:</li>
+                    </ol>
+                    <div class="bg-gray-900 rounded-lg shadow-lg relative group">
+                        <button class="copy-btn absolute top-2 right-2 bg-slate-700 text-slate-300 px-2 py-1 rounded-md text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity">Copy</button>
+                        <pre class="p-4 text-gray-300 text-sm overflow-x-auto"><code class="language-cpp">#define WIFI_SSID "YOUR_WIFI_SSID"
+#define WIFI_PASSWORD "YOUR_WIFI_PASSWORD"</code></pre>
+                    </div>
+                    <ol class="list-decimal list-inside space-y-3 text-slate-700 pl-4" start="3">
+                        <li>Update your Firebase credentials:</li>
+                    </ol>
+                    <div class="bg-gray-900 rounded-lg shadow-lg relative group">
+                        <button class="copy-btn absolute top-2 right-2 bg-slate-700 text-slate-300 px-2 py-1 rounded-md text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity">Copy</button>
+                        <pre class="p-4 text-gray-300 text-sm overflow-x-auto"><code class="language-cpp">#define API_KEY "YOUR_FIREBASE_API_KEY"
+#define DATABASE_URL "https://your-project-id.firebaseio.com/"</code></pre>
+                    </div>
+                     <ol class="list-decimal list-inside space-y-3 text-slate-700 pl-4" start="4">
+                        <li>Ensure your Firebase Realtime Database rules allow writes.</li>
+                        <li>Upload the complete code to the ESP32-S3.</li>
+                    </ol>
+                </div>
+                
+                <h3 class="text-2xl font-semibold text-teal-700 mb-4 mt-8">Key Parameters</h3>
+                <div class="overflow-x-auto bg-white rounded-lg shadow-sm border border-slate-200">
+                    <table class="w-full min-w-max text-left text-slate-700">
+                        <thead class="bg-slate-100 text-slate-600 uppercase text-sm">
+                            <tr>
+                                <th class="p-4">Parameter</th>
+                                <th class="p-4">Description</th>
+                                <th class="p-4">Default</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-200">
+                            <tr><td class="p-4 font-medium">`NUM_FEATURES`</td><td class="p-4">Number of features per data sample</td><td class="p-4">19</td></tr>
+                            <tr><td class="p-4 font-medium">`SAMPLE_INTERVAL_MS`</td><td class="p-4">Interval between each reading (on ESP32)</td><td class="p-4">500 ms</td></tr>
+                            <tr><td class="p-4 font-medium">`WINDOW_SIZE`</td><td class="p-4">Number of readings per inference window</td><td class="p-4">10</td></tr>
+                            <tr><td class="p-4 font-medium">`SERIAL_UPDATE_INTERVAL`</td><td class="p-4">How often results are printed to Serial</td><td class="p-4">5 seconds</td></tr>
+                            <tr><td class="p-4 font-medium">`DISPLAY_UPDATE_INTERVAL`</td><td class="p-4">Dashboard refresh interval</td><td class="p-4">10 seconds</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            
+            <!-- Extras Section -->
+            <section id="extras" class="content-section space-y-6">
+                <h2 class="text-3xl font-bold text-teal-800 border-b pb-2">Extras & Enhancements</h2>
+                <p class="text-lg text-slate-700">
+                    This section contains additional information, including example console output, potential future enhancements, and author credits. Click each item to expand it.
+                </p>
+                <div class="space-y-4">
+                    <!-- Accordion Item 1 -->
+                    <div class="bg-white rounded-lg shadow-sm border border-slate-200">
+                        <button class="accordion-toggle flex justify-between items-center w-full p-4 text-left">
+                            <span class="text-xl font-semibold text-teal-700">📊 Serial Console Output Example</span>
+                            <span class="accordion-icon text-2xl text-teal-600 transform transition-transform duration-200">-</span>
+                        </button>
+                        <div class="accordion-content overflow-hidden max-h-0 transition-all duration-300 ease-in-out">
+                            <div class="p-4 pt-0">
+                                <pre class="bg-gray-900 text-gray-300 p-4 rounded-md text-sm overflow-x-auto"><code class="language-text">=============================
+Avg HR: 82.31
+Avg HRV: 24.55
+Avg CO2: 950.12
+Avg Brake Pressure: 18.45
+-----------------------------
+Fatigue: Normal
+Stress: High
+Road: Smooth
+Braking: Normal
+-----------------------------
+Overall: Driver stressed — slow down.
+=============================
+Firebase upload OK (152 ms)</code></pre>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Accordion Item 2 -->
+                    <div class="bg-white rounded-lg shadow-sm border border-slate-200">
+                        <button class="accordion-toggle flex justify-between items-center w-full p-4 text-left">
+                            <span class="text-xl font-semibold text-teal-700">🧠 Future Enhancements</span>
+                            <span class="accordion-icon text-2xl text-teal-600 transform transition-transform duration-200">+</span>
+                        </button>
+                        <div class="accordion-content overflow-hidden max-h-0 transition-all duration-300 ease-in-out">
+                            <ul class="list-disc list-inside space-y-2 text-slate-700 p-4 pt-0">
+                                <li>Add SD card logging for offline operation.</li>
+                                <li>Implement anomaly detection for long-term driver behavior analysis.</li>
+                                <li>Add GPS integration for geo-tagged events.</li>
+                                <li>Secure the Firebase connection using authenticated users instead of just the API key.</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <!-- Accordion Item 3 -->
+                    <div class="bg-white rounded-lg shadow-sm border border-slate-200">
+                        <button class="accordion-toggle flex justify-between items-center w-full p-4 text-left">
+                            <span class="text-xl font-semibold text-teal-700">🧑‍💻 Author</span>
+                            <span class="accordion-icon text-2xl text-teal-600 transform transition-transform duration-200">+</span>
+                        </button>
+                        <div class="accordion-content overflow-hidden max-h-0 transition-all duration-300 ease-in-out">
+                            <div class="p-4 pt-0 text-slate-700">
+                                <p class="text-lg">Dynamic Guardian Project</p>
+                                <p>Created by Chaitanya Srivastava and Team Decrypters</p>
+                                <p class="italic mt-2">“Turning vehicles into intelligent co-pilots.”</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- Modal Backdrop -->
+    <div id="modal-backdrop" class="modal-backdrop">
+        <!-- Modals will be injected here by JS -->
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- Navigation ---
+            const navLinks = document.querySelectorAll('.nav-link');
+            const contentSections = document.querySelectorAll('.content-section');
+
+            function updateActiveSection() {
+                const hash = window.location.hash || '#overview';
+                
+                navLinks.forEach(link => {
+                    if (link.getAttribute('href') === hash) {
+                        link.classList.add('active');
+                    } else {
+                        link.classList.remove('active');
+                    }
+                });
+                
+                contentSections.forEach(section => {
+                    if ('#' + section.id === hash) {
+                        section.classList.add('active');
+                    } else {
+                        section.classList.remove('active');
+                    }
+                });
+            }
+
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    window.location.hash = link.getAttribute('href');
+                });
+            });
+            
+            window.addEventListener('hashchange', updateActiveSection);
+            updateActiveSection(); // Initial load
+
+            // --- Chart.js Dashboard Mockups ---
+            function createCharts() {
+                const driverStatusCtx = document.getElementById('driverStatusChart')?.getContext('2d');
+                if (driverStatusCtx) {
+                    new Chart(driverStatusCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: ['Fatigue', 'Stress'],
+                            datasets: [{
+                                label: 'Level (0-100%)',
+                                data: [20, 55],
+                                backgroundColor: ['#0d9488', '#f97316'],
+                                borderRadius: 4,
+                                barPercentage: 0.6,
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    max: 100
+                                }
+                            },
+                            plugins: {
+                                legend: { display: false },
+                                title: { display: false }
+                            }
+                        }
+                    });
+                }
+
+                const vehicleEventsCtx = document.getElementById('vehicleEventsChart')?.getContext('2d');
+                if (vehicleEventsCtx) {
+                    new Chart(vehicleEventsCtx, {
+                        type: 'line',
+                        data: {
+                            labels: ['-30s', '-25s', '-20s', '-15s', '-10s', '-5s', 'Now'],
+                            datasets: [
+                                {
+                                    label: 'Pothole Level',
+                                    data: [0.1, 0.1, 0.2, 0.5, 0.2, 0.1, 0.2],
+                                    borderColor: '#0284c7',
+                                    backgroundColor: 'rgba(2, 132, 199, 0.1)',
+                                    fill: true,
+                                    tension: 0.3
+                                },
+                                {
+                                    label: 'Braking Level',
+                                    data: [0.2, 0.2, 0.3, 0.2, 0.7, 0.3, 0.2],
+                                    borderColor: '#db2777',
+                                    backgroundColor: 'rgba(219, 39, 119, 0.1)',
+                                    fill: true,
+                                    tension: 0.3
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    max: 1
+                                }
+                            },
+                            plugins: {
+                                legend: {
+                                    position: 'bottom',
+                                    labels: { padding: 10 }
+                                },
+                                title: { display: false }
+                            }
+                        }
+                    });
+                }
+            }
+            
+            if (document.getElementById('dashboard').classList.contains('active')) {
+                createCharts();
+            } else {
+                const dashboardObserver = new MutationObserver((mutations) => {
+                    if (document.getElementById('dashboard').classList.contains('active')) {
+                        createCharts();
+                        dashboardObserver.disconnect();
+                    }
+                });
+                dashboardObserver.observe(document.getElementById('dashboard'), { attributes: true, attributeFilter: ['class'] });
+            }
+
+            // --- Copy Code Buttons ---
+            document.querySelectorAll('.copy-btn').forEach(button => {
+                button.addEventListener('click', () => {
+                    const code = button.nextElementSibling.querySelector('code').innerText;
+                    const textarea = document.createElement('textarea');
+                    textarea.value = code;
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    try {
+                        document.execCommand('copy');
+                        button.innerText = 'Copied!';
+                    } catch (err) {
+                        button.innerText = 'Error';
+                    }
+                    document.body.removeChild(textarea);
+                    setTimeout(() => {
+                        button.innerText = 'Copy';
+                    }, 2000);
+                });
+            });
+
+            // --- Accordion ---
+            document.querySelectorAll('.accordion-toggle').forEach(button => {
+                button.addEventListener('click', () => {
+                    const content = button.nextElementSibling;
+                    const icon = button.querySelector('.accordion-icon');
+                    if (content.style.maxHeight) {
+                        content.style.maxHeight = null;
+                        icon.innerText = '+';
+                    } else {
+                        content.style.maxHeight = content.scrollHeight + 'px';
+                        icon.innerText = '-';
+                    }
+                });
+                if (button.parentElement.querySelector('pre')) {
+                    const content = button.nextElementSibling;
+                    content.style.maxHeight = content.scrollHeight + 'px';
+                    button.querySelector('.accordion-icon').innerText = '-';
+                }
+            });
+
+            // --- Interactive Architecture Modals ---
+            const modalBackdrop = document.getElementById('modal-backdrop');
+            const modalData = {
+                'sensors-modal': {
+                    title: 'Sensors',
+                    text: 'Gathers live data streams from all connected sensors, including heart rate, accelerometer (MPU6050), CO₂, and braking pressure.'
+                },
+                'arduino-modal': {
+                    title: 'Arduino (Transmitter)',
+                    text: 'Acts as a dedicated sensor hub. Its only job is to read from all sensors, format the data into a single, clean string, and transmit it via UART. This offloads the ESP32 and improves system stability.'
+                },
+                'esp32-modal': {
+                    title: 'ESP32-S3 (Receiver)',
+                    text: 'The main controller. It continuously listens for serial data from the Arduino, parses the string to extract sensor values, and feeds them into a rolling 5-second window to smooth out variations.'
+                },
+                'ml-modal': {
+                    title: 'Edge Impulse Classifier',
+                    text: 'A machine learning model (from Edge Impulse) that receives the averaged data window. It runs an inference to return prediction scores for fatigue, stress, pothole detection, and harsh braking.'
+                },
+                'ui-modal': {
+                    title: 'LVGL Dashboard',
+                    text: 'A dynamic, real-time dashboard displayed on the ESP32\'s AMOLED screen. It includes bars for fatigue/stress, a line chart for road/braking events, and summary status indicators.'
+                },
+                'db-modal': {
+                    title: 'Firebase Realtime Database',
+                    text: 'A cloud-based NoSQL database. Every 5 seconds, the ESP32 sends a summarized JSON packet of the latest data and classification states for remote monitoring and analytics.'
+                }
+            };
+
+            function createModal(id) {
+                const data = modalData[id];
+                if (!data) return;
+                
+                const modal = document.createElement('div');
+                modal.className = 'modal-content';
+                modal.innerHTML = `
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-2xl font-semibold text-teal-700">${data.title}</h3>
+                        <button class="modal-close text-3xl text-slate-400 hover:text-slate-600">&times;</button>
+                    </div>
+                    <p class="text-slate-700">${data.text}</p>
+                `;
+                modalBackdrop.innerHTML = '';
+                modalBackdrop.appendChild(modal);
+                modalBackdrop.classList.add('active');
+                
+                modal.querySelector('.modal-close').addEventListener('click', () => {
+                    modalBackdrop.classList.remove('active');
+                });
+            }
+
+            document.querySelectorAll('.modal-trigger').forEach(trigger => {
+                trigger.addEventListener('click', () => {
+                    createModal(trigger.dataset.modal);
+                });
+            });
+
+            modalBackdrop.addEventListener('click', (e) => {
+                if (e.target === modalBackdrop) {
+                    modalBackdrop.classList.remove('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
