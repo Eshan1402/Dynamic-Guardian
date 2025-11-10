@@ -1,4 +1,5 @@
 🚗 Dynamic Guardian – AI-Driven Vehicle Health & Driver Monitoring
+I have attached three hardware code files each on perform according to there name Arduino duo for CAN data recv and ESP32 for serial communcation and performing ML opration on the edge and One more file where i have used some dummy data and dummy situation for testing our model over there i have attached all the code firebase api key so it will give proper output 
 
 🚀 Interactive Showcase
 
@@ -6,13 +7,11 @@ Check out a live, interactive demo of the project's architecture, dashboard, and
 
 ➡️ Click here for the Live Interactive Demo!
 
-(Just replace the link above with your own GitHub Pages URL after you set it up in your repo settings.)
 
 UI Demo
 
 Here is a quick walkthrough of the interactive showcase app:
 
-(To make this work: 1. Record a GIF of the HTML app. 2. Name it showcase.gif. 3. Upload it to your repo. 4. Update the path in the line above if needed.)
 
 🧠 System Overview
 
@@ -64,7 +63,7 @@ LV_Helper
 
 Firebase_ESP_Client
 
-[Your_Project]_inferencing.h (from Edge Impulse)
+#include <Edge_device_inferencing.h> (from Edge Impulse)
 
 WiFi.h
 
